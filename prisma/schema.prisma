@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────
+
+model Admin {
+  id    Int     @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // relations
+  items         Item[]
+  borrowedItems BorrowedItem[]
+
+  @@map("admins")
+}
+
+// ─────────────────────────────────────────
+// BORROWER
+// ─────────────────────────────────────────
+
+model Borrower {
+  id    Int     @id @default(autoincrement())
+  username  String   @unique
+  fullName  String   @map("full_name")
+  pinHash   String   @map("pin_hash")
+  isBlocked Boolean  @default(false) @map("is_blocked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // relations
+  borrowedItems BorrowedItem[]
+  penalties     Penalty[]
+
+  @@map("borrowers")
+}
+
+// ─────────────────────────────────────────
+// ITEM
+// ─────────────────────────────────────────
+
+model Item {
+  id    Int     @id @default(autoincrement())
+  name        String
+  category    String
+  isReturnable Boolean @default(false) @map("is_returnable")
+  quantity    Int      @default(0)
+  createdBy   Int   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // relations
+  admin         Admin          @relation(fields: [createdBy], references: [id])
+  borrowedItems BorrowedItem[]
+
+  @@map("items")
+}
+
+// ─────────────────────────────────────────
+// BORROWED ITEM
+// ─────────────────────────────────────────
+
+enum BorrowedItemStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+  COMPLETED  // used for disposables — auto-set on approval
+  OVERDUE
+}
+
+model BorrowedItem {
+  id    Int     @id @default(autoincrement())
+  borrowerId Int             @map("borrower_id")
+  itemId     Int             @map("item_id")
+  approvedBy Int?            @map("approved_by")
+  quantity   Int
+  status     BorrowedItemStatus @default(PENDING)
+
+  // null for disposables, set for returnable equipment
+  dueDate    DateTime?          @map("due_date")
+  returnedAt DateTime?          @map("returned_at")
+
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  // relations
+  borrower   Borrower           @relation(fields: [borrowerId], references: [id])
+  item       Item               @relation(fields: [itemId], references: [id])
+  admin      Admin?             @relation(fields: [approvedBy], references: [id])
+  penalty    Penalty?
+
+  @@map("borrowed_items")
+}
+
+// ─────────────────────────────────────────
+// PENALTY
+// ─────────────────────────────────────────
+
+enum PenaltyStatus {
+  UNPAID
+  CLEARED
+}
+
+model Penalty {
+  id    Int     @id @default(autoincrement())
+  borrowerId     Int        @map("borrower_id")
+  borrowedItemId Int        @unique @map("borrowed_item_id")
+  status         PenaltyStatus @default(UNPAID)
+  issuedAt       DateTime      @default(now()) @map("issued_at")
+  clearedAt      DateTime?     @map("cleared_at")
+
+  // relations
+  borrower     Borrower     @relation(fields: [borrowerId], references: [id])
+  borrowedItem BorrowedItem @relation(fields: [borrowedItemId], references: [id])
+
+  @@map("penalties")
+}

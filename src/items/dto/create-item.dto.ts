@@ -2,15 +2,15 @@ import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateItemDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  category: string;
+  category!: string;
 
   @IsBoolean()
-  isReturnable: boolean;
+  isReturnable!: boolean;
 
   @IsInt()
   @Min(0)
-  quantity: number;
+  quantity!: number;
 }

@@ -190,7 +190,10 @@ export class LoansService {
   }
 
   async findByBorrower(username: string) {
-    const borrower = await this.prisma.borrower.findUnique({ where: { username } });
+    const borrower = await this.prisma.borrower.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+    });
+    console.log('Finding borrower with username:', username);
     console.log('Found borrower:', borrower);
     if (!borrower) throw new NotFoundException('Borrower not found');
     return this.prisma.borrowedItem.findMany({

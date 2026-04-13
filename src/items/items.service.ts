@@ -8,8 +8,8 @@ import { UpdateItemDto } from './dto/update-item.dto';
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateItemDto, adminId: number) {
-    return this.prisma.item.create({
+  async create(dto: CreateItemDto, adminId: number) {
+    return await this.prisma.item.create({
       data: {
         name: dto.name,
         category: dto.category,
@@ -20,9 +20,9 @@ export class ItemsService {
     });
   }
 
-  findAll(query: { category?: string; search?: string; isReturnable?: string }) {
+ async findAll(query: { category?: string; search?: string; isReturnable?: string }) {
     const { category, search, isReturnable } = query;
-    return this.prisma.item.findMany({
+    return await this.prisma.item.findMany({
       where: {
         ...(category && { category }),
         ...(search && { name: { contains: search, mode: 'insensitive' } }),

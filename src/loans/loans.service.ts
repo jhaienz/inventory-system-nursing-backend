@@ -189,9 +189,9 @@ export class LoansService {
     });
   }
 
-  // ── Loans by borrower username (for admin dashboard) ──────────────────────
   async findByBorrower(username: string) {
     const borrower = await this.prisma.borrower.findUnique({ where: { username } });
+    console.log('Found borrower:', borrower);
     if (!borrower) throw new NotFoundException('Borrower not found');
     return this.prisma.borrowedItem.findMany({
       where: { borrowerId: borrower.id },

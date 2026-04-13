@@ -33,7 +33,6 @@ export class LoansController {
   }
 
   // GET /loans/borrower/:username  (admin)
-  @UseGuards(JwtAuthGuard)
   @Get('borrower/:username')
   findByBorrower(@Param('username') username: string) {
     return this.loansService.findByBorrower(username);

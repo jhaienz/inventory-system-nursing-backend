@@ -20,6 +20,7 @@ pnpm run test            # Unit tests
 pnpm run test:watch      # Unit tests in watch mode
 pnpm run test:cov        # Unit tests with coverage
 pnpm run test:e2e        # End-to-end tests
+pnpm run test -- --testPathPattern=loans  # Run a single test file
 
 # Code quality
 pnpm run lint            # ESLint with auto-fix
@@ -59,7 +60,7 @@ Five entities in [prisma/schema.prisma](prisma/schema.prisma):
 - **admins** — Staff who manage inventory and approve requests
 - **borrowers** — Nurses/staff; `is_blocked` is set automatically when a penalty is issued
 - **items** — Inventory; `is_returnable` distinguishes equipment (tracked individually) from consumables (stock decremented on approval)
-- **borrowed_items** — Loan lifecycle: `PENDING → APPROVED/REJECTED`; equipment goes `APPROVED → RETURNED`; consumables auto-jump to `COMPLETED` on approval; cron moves `APPROVED → OVERDUE`
+- **borrowed_items** — Loan lifecycle: `PENDING → APPROVED/REJECTED`; equipment goes `APPROVED/OVERDUE → RETURNED`; consumables auto-jump to `COMPLETED` on approval; cron moves `APPROVED → OVERDUE`
 - **penalties** — Auto-issued by cron when equipment is overdue; `UNPAID | CLEARED`; clearing unblocks the borrower if no other unpaid penalties remain
 
 ### Module map
@@ -70,7 +71,7 @@ Five entities in [prisma/schema.prisma](prisma/schema.prisma):
 | Admins | `src/admins/` | JWT (except `POST /admins`) | Create first admin without token |
 | Borrowers | `src/borrowers/` | JWT | Admin manages borrower accounts |
 | Items | `src/items/` | JWT for writes, public for reads | `GET /items/:id` includes live availability for equipment |
-| Loans | `src/loans/` | JWT for admin actions; `POST /loans` is public | Borrower sends `username + pin + itemId + quantity + dueDate` |
+| Loans | `src/loans/` | JWT for admin actions; `POST /loans` and `GET /loans/borrower/:username` are public | Borrower sends `username + pin + itemId + quantity + dueDate` |
 | Penalties | `src/penalties/` | JWT | `PATCH /penalties/:id/clear` unblocks borrower |
 | Scheduler | `src/scheduler/` | — | `@Cron` runs at midnight; marks overdue loans, issues penalties, blocks borrowers |
 
@@ -122,12 +123,12 @@ PIN must be 4–8 characters.
 | POST | `/loans` | — | `{ username, pin, itemId, quantity, dueDate? }` | Submit borrow request; `dueDate` (ISO 8601) required for equipment |
 | GET | `/loans` | JWT | `?status=PENDING\|APPROVED\|...` | List all loans, filterable by status |
 | GET | `/loans/:id` | JWT | — | Single loan detail |
-| GET | `/loans/borrower/:username` | JWT | — | All loans for a specific borrower |
+| GET | `/loans/borrower/:username` | — | — | All loans for a specific borrower |
 | PATCH | `/loans/:id/approve` | JWT | — | Approve loan (consumables auto-complete + decrement stock) |
 | PATCH | `/loans/:id/reject` | JWT | — | Reject loan |
 | PATCH | `/loans/:id/return` | JWT | — | Mark equipment as returned |
 
-**Loan statuses:** `PENDING` → `APPROVED` / `REJECTED` / `COMPLETED` (consumable); `APPROVED` → `RETURNED` or `OVERDUE` (cron)
+**Loan statuses:** `PENDING` → `APPROVED` / `REJECTED` / `COMPLETED` (consumable); `APPROVED` → `OVERDUE` (cron); `APPROVED` or `OVERDUE` → `RETURNED`
 
 ### Penalties
 
